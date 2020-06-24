@@ -14,13 +14,6 @@ VOC_CLASSES = (  # always index 0
    'sheep', 'sofa', 'train', 'tvmonitor')
 
 class_to_ind = dict(zip(VOC_CLASSES, range(len(VOC_CLASSES))))
-# print(class_to_ind)
-# annopath = osp.join('/Users/quan/VOC2007/sample_train/Annotations/' + '000005' + '.xml')
-# target = etree.parse(annopath).getroot()
-# print(type(target))
-# for obj in target.iter('object'):
-#     name = obj.find('name')
-#     print(name.text.lower().strip())
 
 """hyper parameters"""
 file_path = '/Users/quan/VOC2007/sample_test/Annotations/' 
@@ -34,6 +27,9 @@ id_name = dict()
 sign = 'val'
 if sign == 'train':
     idx_list = ['05', '07', '09', '12', '16']
+    file_path = '/Users/quan/VOC2007/sample_train/Annotations/' 
+    images_dir_path = '/Users/quan/VOC2007/sample_train/JPEGImages'
+    output_path = '../data/train.txt'
 else:
     idx_list = ['01', '02', '03', '04', '06', '08', '10']
 for i in idx_list:
