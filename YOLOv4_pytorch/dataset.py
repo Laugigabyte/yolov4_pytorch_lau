@@ -251,6 +251,7 @@ class Yolo_dataset(Dataset):
         self.cfg = cfg
 
         truth = {}
+        print(lable_path)
         f = open(lable_path, 'r', encoding='utf-8')
         for line in f.readlines():
             data = line.split(" ")
@@ -261,6 +262,7 @@ class Yolo_dataset(Dataset):
         self.truth = truth
 
     def __len__(self):
+        # how many images
         return len(self.truth.keys())
 
     def __getitem__(self, index):

@@ -16,7 +16,7 @@ def transform_to_onnx(weight_file, batch_size, n_classes, IN_IMAGE_H, IN_IMAGE_W
     
     model = Yolov4(n_classes=n_classes, inference=True)
 
-    pretrained_dict = torch.load(weight_file, map_location=torch.device('cuda'))
+    pretrained_dict = torch.load(weight_file, map_location=torch.device('cpu'))
     model.load_state_dict(pretrained_dict)
 
     x = torch.randn((batch_size, 3, IN_IMAGE_H, IN_IMAGE_W), requires_grad=True)  # .cuda()

@@ -452,56 +452,75 @@ if __name__ == "__main__":
     import cv2
 
     namesfile = None
-    if len(sys.argv) == 6:
-        n_classes = int(sys.argv[1])
-        weightfile = sys.argv[2]
-        imgfile = sys.argv[3]
-        height = int(sys.argv[4])
-        width = int(sys.argv[5])
-    elif len(sys.argv) == 7:
-        n_classes = int(sys.argv[1])
-        weightfile = sys.argv[2]
-        imgfile = sys.argv[3]
-        height = sys.argv[4]
-        width = int(sys.argv[5])
-        namesfile = int(sys.argv[6])
-    else:
-        print('Usage: ')
-        print('  python models.py num_classes weightfile imgfile namefile')
+    # if len(sys.argv) == 6:
+    #     n_classes = int(sys.argv[1])
+    #     weightfile = sys.argv[2]
+    #     imgfile = sys.argv[3]
+    #     height = int(sys.argv[4])
+    #     width = int(sys.argv[5])
+    # elif len(sys.argv) == 7:
+    #     n_classes = int(sys.argv[1])
+    #     weightfile = sys.argv[2]
+    #     imgfile = sys.argv[3]
+    #     height = sys.argv[4]
+    #     width = int(sys.argv[5])
+    #     namesfile = int(sys.argv[6])
+    # else:
+    #     print('Usage: ')
+    #     print('  python models.py num_classes weightfile imgfile namefile')
+    import argparse
 
-    model = Yolov4(yolov4conv137weight=None, n_classes=n_classes, inference=True)
 
-    pretrained_dict = torch.load(weightfile, map_location=torch.device('cuda'))
+    parser = argparse.ArgumentParser(description='YOLOv4')
+    parser.add_argument('--n_classes', default=80, type=int, help='number of classes')
+    parser.add_argument('--weightfile', default='weights/yolov4.pth', help='weight file')
+    parser.add_argument('--imgfile', default='/Users/quan/VOC2007/test/JPEGImages/', help='images file')
+    parser.add_argument('--height', default=320, help='images height')
+    parser.add_argument('--width', default=320, help='images width')
+    args = parser.parse_args()
+
+    model = Yolov4(yolov4conv137weight=None, n_classes=args.n_classes, inference=True)
+
+    pretrained_dict = torch.load(args.weightfile, map_location=torch.device('cpu'))
     model.load_state_dict(pretrained_dict)
 
-    use_cuda = True
+    use_cuda = False
     if use_cuda:
         model.cuda()
+    with open('/Users/quan/VOC2007/test/ImageSets/Main/test.txt', 'r') as f:
+        i = 0
+        for line in f:
+            line = line.strip('\n') + '.jpg'
+            tmp_img = args.imgfile+line
+            img = cv2.imread(tmp_img)
+            # print(img.shape)
+            # Inference input size is 416*416 does not mean training size is the same
+            # Training size could be 608*608 or even other sizes
+            # Optional inference sizes:
+            #   Hight in {320, 416, 512, 608, ... 320 + 96 * n}
+            #   Width in {320, 416, 512, 608, ... 320 + 96 * m}
+            sized = cv2.resize(img, (args.width, args.height))
+            sized = cv2.cvtColor(sized, cv2.COLOR_BGR2RGB)
 
-    img = cv2.imread(imgfile)
+            from tool.utils import load_class_names, plot_boxes_cv2
+            from tool.torch_utils import do_detect
 
-    # Inference input size is 416*416 does not mean training size is the same
-    # Training size could be 608*608 or even other sizes
-    # Optional inference sizes:
-    #   Hight in {320, 416, 512, 608, ... 320 + 96 * n}
-    #   Width in {320, 416, 512, 608, ... 320 + 96 * m}
-    sized = cv2.resize(img, (width, height))
-    sized = cv2.cvtColor(sized, cv2.COLOR_BGR2RGB)
+            for i in range(2):  # This 'for' loop is for speed check
+                                # Because the first iteration is usually longer
+                boxes = do_detect(model, sized, 0.4, 0.6, use_cuda)
 
-    from tool.utils import load_class_names, plot_boxes_cv2
-    from tool.torch_utils import do_detect
+            if namesfile == None:
+                if args.n_classes == 20:
+                    namesfile = 'data/voc.names'
+                elif args.n_classes == 80:
+                    namesfile = 'data/coco.names'
+                else:
+                    print("please give namefile")
 
-    for i in range(2):  # This 'for' loop is for speed check
-                        # Because the first iteration is usually longer
-        boxes = do_detect(model, sized, 0.4, 0.6, use_cuda)
+            class_names = load_class_names(namesfile)
+            # print(class_names)
+            plot_boxes_cv2(img, boxes[0], 'predicitons_imgs/predictions_'+tmp_img[-10:-4]+'.jpg', class_names)
+            i += 1
+            if i ==100:
+                break
 
-    if namesfile == None:
-        if n_classes == 20:
-            namesfile = 'data/voc.names'
-        elif n_classes == 80:
-            namesfile = 'data/coco.names'
-        else:
-            print("please give namefile")
-
-    class_names = load_class_names(namesfile)
-    plot_boxes_cv2(img, boxes[0], 'predictions.jpg', class_names)
